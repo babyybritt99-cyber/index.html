@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="She Glows">
+<meta name="theme-color" content="#0D0810">
+<title>She Glows ✨</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0D0810;font-family:'Outfit',sans-serif;color:#FDF0E8;min-height:100vh;-webkit-tap-highlight-color:transparent}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#E8527A;border-radius:2px}
+.serif{font-family:'Cormorant Garamond',serif}
+.btn{border:none;border-radius:100px;cursor:pointer;font-family:'Outfit',sans-serif;font-weight:500;transition:all .2s;-webkit-appearance:none}
+.primary{background:linear-gradient(135deg,#E8527A,#C9973A);color:#fff;padding:11px 22px;font-size:13px;box-shadow:0 4px 20px rgba(232,82,122,.3)}
+.primary:active{transform:scale(.97)}
+.primary:disabled{opacity:.5;cursor:default}
+.ghost{background:transparent;border:1px solid #E8527A;color:#E8527A;padding:9px 18px;font-size:12px}
+.ghost:active{background:#E8527A;color:#fff}
+.soft{background:rgba(232,82,122,.1);color:#F4A0B8;border:1px solid rgba(232,82,122,.18);padding:8px 14px;font-size:12px}
+.soft:active,.soft.on{background:#E8527A;color:#fff;border-color:#E8527A}
+.card{background:#1E1420;border-radius:18px;border:1px solid rgba(220,100,150,.15);padding:20px}
+.inp{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(220,100,150,.2);border-radius:12px;padding:11px 15px;color:#FDF0E8;font-size:13px;outline:none;transition:border .2s;font-family:'Outfit',sans-serif;-webkit-appearance:none}
+.inp:focus{border-color:#E8527A}
+.inp::placeholder{color:#7A5568}
+.inp option{background:#1E1420}
+.tag{display:inline-block;background:rgba(232,82,122,.1);color:#F4A0B8;border-radius:20px;padding:4px 12px;font-size:11px;margin:3px;cursor:pointer;border:1px solid transparent;transition:all .2s}
+.tag:active{background:#E8527A;color:#fff}
+.aout{background:linear-gradient(135deg,rgba(232,82,122,.07),rgba(184,160,212,.06));border:1px solid rgba(232,82,122,.15);border-radius:14px;padding:18px;margin-top:14px;line-height:1.75;font-size:13px;white-space:pre-wrap}
+.pbar{height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.pfill{height:100%;border-radius:3px;background:linear-gradient(135deg,#E8527A,#C9973A);transition:width .6s}
+.badge{display:inline-flex;align-items:center;gap:4px;background:rgba(201,151,58,.12);color:#C9973A;border:1px solid rgba(201,151,58,.25);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600}
+.sh{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;background:linear-gradient(135deg,#E8527A,#C9973A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+.shim{animation:shim 1.5s infinite;background:linear-gradient(90deg,rgba(255,255,255,.03) 25%,rgba(232,82,122,.07) 50%,rgba(255,255,255,.03) 75%);background-size:200% 100%;border-radius:12px}
+@keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+textarea.inp{resize:vertical;min-height:72px}
+select.inp{cursor:pointer}
+@media(max-width:640px){.g2{grid-template-columns:1fr}.g3{grid-template-columns:1fr 1fr}}
+#root{min-height:100vh}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ── Storage ──────────────────────────────────────────────────────
+const DB_KEY = "sheglows_v2";
+const loadDB = () => { try { return JSON.parse(localStorage.getItem(DB_KEY)) || {}; } catch { return {}; } };
+const saveDB = (db) => { try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch {} };
+
+// ── AI ───────────────────────────────────────────────────────────
+async function askClaude(msg, sys) {
+  const key = (loadDB().apiKey || "").trim();
+  if (!key) return "No API key set. Go to Settings in the menu to add your Anthropic API key.";
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-iab": "true" },
+      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, system: sys || "You are She Glows AI, a warm expert beauty and wellness coach. Explain everything step by step simply. Be encouraging and use emojis.", messages: [{ role: "user", content: msg }] })
+    });
+    const d = await res.json();
+    if (d.error) return "AI error: " + d.error.message;
+    return d.content?.[0]?.text || "Having trouble connecting. Try again!";
+  } catch(e) { return "Could not reach AI. Check your connection and try again!"; }
+}
+
+async function askClaudePhoto(b64, prompt, sys) {
+  const key = (loadDB().apiKey || "").trim();
+  if (!key) return "No API key set. Go to Settings in the menu to add your Anthropic API key.";
+  const imgData = b64.includes(",") ? b64.split(",")[1] : b64;
+  const mediaType = b64.includes("image/png") ? "image/png" : "image/jpeg";
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-iab": "true" },
+      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1200, system: sys || "You are She Glows AI, a warm expert beauty and wellness coach.", messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data: imgData } }, { type: "text", text: prompt }] }] })
+    });
+    const d = await res.json();
+    if (d.error) return "AI error: " + d.error.message;
+    return d.content?.[0]?.text || "Could not analyze photo. Try again!";
+  } catch(e) { return "Could not analyze photo. Check your connection and try again!"; }
+}
+
+// ── Colors ───────────────────────────────────────────────────────
+const R="#E8527A",G="#C9973A",BG="#0D0810",PANEL="#160E14",BORDER="rgba(220,100,150,.15)",CREAM="#FDF0E8",MUTED="#7A5568",MINT="#7DD3B0",LAV="#B8A0D4",BLUSH="#F4A0B8",GRAD="linear-gradient(135deg,#E8527A,#C9973A)";
+
+function persistUser(u, setUser) {
+  const db = loadDB();
+  saveDB({ ...db, users: { ...(db.users||{}), [u.email]: u } });
+  setUser(u);
+}
+
+// ── AIChat ───────────────────────────────────────────────────────
+function AIChat({ sys, ph, init }) {
+  const [q, setQ] = useState(init||"");
+  const [ans, setAns] = useState("");
+  const [busy, setBusy] = useState(false);
+  const ran = useRef(false);
+  async function go(p) {
+    const txt = p||q; if(!txt.trim()) return;
+    setBusy(true); setAns("");
+    const r = await askClaude(txt, sys);
+    setAns(r); setBusy(false);
+  }
+  useEffect(() => { if(init && !ran.current) { ran.current=true; go(init); } }, []);
+  return (
+    <div>
+      <div style={{display:"flex",gap:8}}>
+        <input className="inp" value={q} onChange={e=>setQ(e.target.value)} placeholder={ph||"Ask me anything..."} onKeyDown={e=>e.key==="Enter"&&go()} style={{flex:1}}/>
+        <button className="btn primary" onClick={()=>go()} disabled={busy}>{busy?"...":"Ask"}</button>
+      </div>
+      {busy && <div className="shim" style={{height:60,marginTop:12}}/>}
+      {ans && <div className="aout">{ans}</div>}
+    </div>
+  );
+}
+
+// ── Settings ─────────────────────────────────────────────────────
+function Settings({ onClose }) {
+  const db = loadDB();
+  const [key, setKey] = useState(db.apiKey||"");
+  const [saved, setSaved] = useState(false);
+  function save() {
+    saveDB({ ...loadDB(), apiKey: key.trim() });
+    setSaved(true);
+    setTimeout(()=>setSaved(false), 2000);
+  }
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:800,background:"rgba(0,0,0,.8)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div className="card" style={{width:"100%",maxWidth:420,padding:28}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <div className="sh" style={{marginBottom:0}}>Settings ⚙️</div>
+          <button onClick={onClose} className="btn ghost" style={{padding:"6px 14px",fontSize:12}}>Close</button>
+        </div>
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:13,color:G,fontWeight:600,marginBottom:8}}>🤖 Anthropic API Key</div>
+          <p style={{fontSize:12,color:MUTED,marginBottom:12,lineHeight:1.7}}>To use the AI features, you need a free Anthropic API key. Get one free at <strong style={{color:BLUSH}}>platform.anthropic.com</strong> - click API Keys, create a key, and paste it here.</p>
+          <input className="inp" type="password" placeholder="sk-ant-api03-..." value={key} onChange={e=>setKey(e.target.value)} style={{marginBottom:10}}/>
+          <button className="btn primary" onClick={save} style={{width:"100%"}}>{saved?"Saved! ✅":"Save API Key"}</button>
+        </div>
+        <div style={{background:"rgba(125,211,176,.08)",border:"1px solid rgba(125,211,176,.2)",borderRadius:12,padding:14}}>
+          <div style={{fontSize:12,color:MINT,fontWeight:600,marginBottom:6}}>How to get your free API key:</div>
+          <div style={{fontSize:12,color:MUTED,lineHeight:1.8}}>
+            1. Go to <strong style={{color:CREAM}}>platform.anthropic.com</strong><br/>
+            2. Create a free account<br/>
+            3. Click "API Keys" in the menu<br/>
+            4. Click "Create Key"<br/>
+            5. Copy and paste it above<br/>
+            <br/>
+            <strong style={{color:BLUSH}}>Cost: Pay as you go. $5 lasts months for personal use.</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Auth ─────────────────────────────────────────────────────────
+function Auth({ onLogin }) {
+  const [mode, setMode] = useState("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+  const [err, setErr] = useState("");
+  function submit() {
+    if(!email||!pass) return setErr("Please fill in all fields.");
+    const db = loadDB();
+    if(mode==="signup") {
+      if(db.users?.[email]) return setErr("Email already registered.");
+      const u = { name:name||email.split("@")[0], email, pass, created:Date.now(), weightLog:[], measureHistory:[], progressPhotos:[], goals:{}, habits:{}, journal:[], skinTracker:[], calLog:[], moodLog:[], fastLog:[] };
+      saveDB({ ...db, users:{...(db.users||{}),[email]:u} });
+      onLogin(u);
+    } else {
+      const u = db.users?.[email];
+      if(!u||u.pass!==pass) return setErr("Email or password incorrect.");
+      onLogin(u);
+    }
+  }
+  return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:BG,padding:20}}>
+      <div style={{width:"100%",maxWidth:400}}>
+        <div style={{textAlign:"center",marginBottom:36}}>
+          <div style={{fontSize:52}}>✨</div>
+          <h1 className="serif" style={{fontSize:48,background:GRAD,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>She Glows</h1>
+          <p style={{color:MUTED,fontSize:13,marginTop:6}}>Beauty - Weight Loss - Wellness - Fashion</p>
+        </div>
+        <div className="card" style={{padding:30}}>
+          <div style={{display:"flex",gap:8,marginBottom:22}}>
+            <button onClick={()=>setMode("login")} className={"btn "+(mode==="login"?"primary":"ghost")} style={{flex:1}}>Sign In</button>
+            <button onClick={()=>setMode("signup")} className={"btn "+(mode==="signup"?"primary":"ghost")} style={{flex:1}}>Create Account</button>
+          </div>
+          {mode==="signup" && <input className="inp" placeholder="Your name" value={name} onChange={e=>setName(e.target.value)} style={{marginBottom:10}}/>}
+          <input className="inp" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} style={{marginBottom:10}}/>
+          <input className="inp" type="password" placeholder="Password" value={pass} onChange={e=>setPass(e.target.value)} style={{marginBottom:16}} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+          {err && <p style={{color:R,fontSize:12,marginBottom:12}}>⚠️ {err}</p>}
+          <button className="btn primary" style={{width:"100%"}} onClick={submit}>{mode==="login"?"Let's Glow ✨":"Start My Glow-Up 🌟"}</button>
+          <p style={{fontSize:11,color:MUTED,textAlign:"center",marginTop:14,lineHeight:1.6}}>Your account is saved on this device. No email verification needed.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Dashboard ────────────────────────────────────────────────────
+function Dashboard({ user, setUser }) {
+  const save = u => persistUser(u, setUser);
+  const [quote, setQuote] = useState("Loading your daily inspiration... ✨");
+  const [mood, setMood] = useState("");
+  useEffect(() => {
+    askClaude("Give "+user.name+" one powerful glow-up motivation quote for today. Just the quote, nothing else.", "You are a beauty and wellness motivational coach. Give SHORT powerful quotes only.").then(setQuote);
+  }, []);
+  const log=user.weightLog||[], last=log[log.length-1], start=log[0];
+  const lost = start&&last ? Math.max(0,parseFloat(start.w)-parseFloat(last.w)).toFixed(1) : null;
+  const goal = user.goals?.targetWeight;
+  const toGo = goal&&last ? Math.max(0,parseFloat(last.w)-parseFloat(goal)).toFixed(1) : null;
+  const pct = goal&&start&&last&&parseFloat(start.w)!==parseFloat(goal) ? Math.min(100,Math.round(((parseFloat(start.w)-parseFloat(last.w))/(parseFloat(start.w)-parseFloat(goal)))*100)) : 0;
+  const moods = ["😊 Great","😐 Okay","😔 Low","😤 Stressed","🔥 Motivated","😴 Tired"];
+  function logMood(m) { setMood(m); save({...user,moodLog:[...(user.moodLog||[]),{mood:m,date:new Date().toLocaleDateString(),ts:Date.now()}]}); }
+  const today = new Date().toLocaleDateString();
+  const todayCals = (user.calLog||[]).filter(c=>c.date===today).reduce((s,c)=>s+(c.cal||0),0);
+  return (
+    <div>
+      <div style={{marginBottom:22}}>
+        <h2 className="sh">Welcome back, {user.name} 💕</h2>
+        <p style={{color:MUTED,fontStyle:"italic",fontSize:13,lineHeight:1.5}}>{quote}</p>
+      </div>
+      <div className="card" style={{marginBottom:14}}>
+        <div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>✨ How are you feeling today?</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{moods.map(m=><button key={m} onClick={()=>logMood(m)} className={"btn soft"+(mood===m?" on":"")}>{m}</button>)}</div>
+      </div>
+      <div className="g2" style={{marginBottom:14}}>
+        <div className="card" style={{background:"linear-gradient(135deg,rgba(232,82,122,.12),rgba(201,151,58,.06))"}}>
+          <div style={{fontSize:24}}>⚖️</div>
+          <div style={{fontSize:22,fontWeight:700,color:R,marginTop:6}}>{last?.w||"--"} <span style={{fontSize:12}}>lbs</span></div>
+          <div style={{color:MUTED,fontSize:11}}>Current Weight</div>
+          {lost>0 && <div className="badge" style={{marginTop:8}}>🔥 -{lost} lbs lost!</div>}
+        </div>
+        <div className="card">
+          <div style={{fontSize:24}}>🎯</div>
+          <div style={{fontSize:22,fontWeight:700,color:G,marginTop:6}}>{goal||"--"} <span style={{fontSize:12}}>lbs</span></div>
+          <div style={{color:MUTED,fontSize:11}}>Goal Weight</div>
+          {toGo>0 && <div style={{color:BLUSH,fontSize:11,marginTop:4}}>{toGo} lbs to go</div>}
+        </div>
+      </div>
+      {goal&&start&&<div className="card" style={{marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:8}}><span style={{color:MUTED}}>Journey Progress</span><span style={{color:R,fontWeight:600}}>{pct}%</span></div>
+        <div className="pbar"><div className="pfill" style={{width:pct+"%"}}/></div>
+      </div>}
+      <div className="g3" style={{marginBottom:14}}>
+        {[["💧","Water",user.goals?.water||"--","cups"],["🍽️","Calories",todayCals+"/"+(user.goals?.calories||"?"),"today"],["💊","Protein",user.goals?.protein||"--","g/day"],["🏃","Steps",user.goals?.steps||"--","goal"],["😴","Sleep",user.goals?.sleep||"--","hrs"],["🌸","Mood",mood||"--","today"]].map(([e,l,v,s])=>(
+          <div key={l} style={{background:"rgba(255,255,255,.03)",borderRadius:12,padding:10,textAlign:"center",border:"1px solid "+BORDER}}>
+            <div style={{fontSize:18}}>{e}</div><div style={{fontSize:10,color:MUTED,marginTop:2}}>{l}</div>
+            <div style={{fontSize:12,fontWeight:600,color:CREAM}}>{v}</div><div style={{fontSize:10,color:MUTED}}>{s}</div>
+          </div>
+        ))}
+      </div>
+      <div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:12}}>🤖 AI Daily Glow Advisor</div><AIChat sys="You are a warm daily beauty and wellness coach. Give personalized specific daily tips. Be encouraging and brief." ph="Tell me how you are feeling or what you need help with today..."/></div>
+    </div>
+  );
+}
+
+// ── WeightLoss ───────────────────────────────────────────────────
+function WeightLoss({ user, setUser }) {
+  const save = u => persistUser(u, setUser);
+  const [tab, setTab] = useState("log");
+  const TABS=[["log","📝 Weight Log"],["goals","🎯 Goals"],["calories","🍽️ Calories"],["meal","🥗 Meal Plans"],["workout","💪 Workouts"],["fasting","⏱️ Fasting"],["macros","📊 Macros"],["habits","✅ Habits"],["predict","🔮 Predictor"],["emotional","💭 Emotional"],["ai","🤖 AI Coach"]];
+  const [w,setW]=useState(""), [wNote,setWNote]=useState(""), [calFood,setCalFood]=useState(""), [cal,setCal]=useState("");
+  const [fastStart,setFastStart]=useState(user.fastStart||null);
+  const log=user.weightLog||[], last=log[log.length-1], start=log[0];
+  const today=new Date().toLocaleDateString();
+  const todayCals=(user.calLog||[]).filter(c=>c.date===today).reduce((s,c)=>s+(c.cal||0),0);
+  function logW(){if(!w)return;save({...user,weightLog:[...log,{w,note:wNote,date:today,ts:Date.now()}]});setW("");setWNote("");}
+  function logCal(){if(!cal||!calFood)return;save({...user,calLog:[...(user.calLog||[]),{food:calFood,cal:parseInt(cal),date:today,ts:Date.now()}]});setCal("");setCalFood("");}
+  function toggleHabit(h){const key=today+"|"+h;const hd=user.habits||{};save({...user,habits:{...hd,[key]:!hd[key]}});}
+  function toggleFast(){if(fastStart){const dur=Math.round((Date.now()-fastStart)/360000)/10;save({...user,fastStart:null,fastLog:[...(user.fastLog||[]),{hours:dur,date:today}]});setFastStart(null);}else{const now=Date.now();setFastStart(now);save({...user,fastStart:now});}}
+  function saveGoals(e){e.preventDefault();const fd=new FormData(e.target);const g={};for(let[k,v]of fd.entries())g[k]=v;save({...user,goals:{...user.goals,...g}});alert("Goals saved! 🎯");}
+  const habits=["💧 Drink water","🥗 Eat veggies","🏃 Exercise","😴 Sleep 7+ hrs","🧘 Meditate","📝 Log food","⚖️ Weigh in","🚶 10k steps"];
+  const dietStr=user.goals?.diet||"general", actStr=user.goals?.activity||"moderate", goalStr=user.goals?.targetWeight||"?";
+  return (
+    <div>
+      <h2 className="sh">Weight Loss Journey ⚖️</h2>
+      <div className="tabs">{TABS.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"btn soft"+(tab===k?" on":"")}>{l}</button>)}</div>
+      {tab==="log"&&<div>
+        <div className="card" style={{marginBottom:14}}>
+          <div style={{fontSize:12,color:G,fontWeight:600,marginBottom:12}}>📝 Log Today's Weight</div>
+          <div style={{display:"flex",gap:8,marginBottom:8}}><input className="inp" placeholder="Weight (lbs)" value={w} onChange={e=>setW(e.target.value)} type="number" style={{flex:1}}/><button className="btn primary" onClick={logW}>Log</button></div>
+          <input className="inp" placeholder="How do you feel? (optional)" value={wNote} onChange={e=>setWNote(e.target.value)}/>
+        </div>
+        {log.length>0&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:12}}>📊 Weight History</div>{[...log].reverse().slice(0,20).map((e,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:13}}><span style={{fontWeight:600}}>{e.w} lbs</span><span style={{color:MUTED,fontSize:11}}>{e.date}</span>{e.note&&<span style={{color:BLUSH,fontSize:11,fontStyle:"italic"}}>{e.note}</span>}</div>)}</div>}
+      </div>}
+      {tab==="goals"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:14}}>🎯 Your Goals</div><form onSubmit={saveGoals}><div className="g2">{[["Goal Weight (lbs)","targetWeight"],["Daily Calories","calories"],["Daily Protein (g)","protein"],["Daily Steps","steps"],["Water (cups)","water"],["Sleep (hrs)","sleep"]].map(([l,n])=><div key={n}><label style={{fontSize:11,color:MUTED,display:"block",marginBottom:3}}>{l}</label><input className="inp" name={n} type="number" defaultValue={user.goals?.[n]}/></div>)}</div><div style={{marginTop:12,marginBottom:12}}><label style={{fontSize:11,color:MUTED,display:"block",marginBottom:4}}>Diet Type</label><select className="inp" name="diet" defaultValue={user.goals?.diet}>{["General Healthy","Keto","Low Carb","Mediterranean","Vegan","Vegetarian","Paleo","Intermittent Fasting","High Protein","OMAD","Carnivore","Gluten Free"].map(d=><option key={d}>{d}</option>)}</select></div><div style={{marginBottom:16}}><label style={{fontSize:11,color:MUTED,display:"block",marginBottom:4}}>Activity Level</label><select className="inp" name="activity" defaultValue={user.goals?.activity}>{["Sedentary","Lightly Active (1-2x/wk)","Moderately Active (3-4x/wk)","Very Active (5-6x/wk)","Extremely Active"].map(a=><option key={a}>{a}</option>)}</select></div><button className="btn primary" type="submit" style={{width:"100%"}}>Save Goals 🎯</button></form></div>}
+      {tab==="calories"&&<div>
+        <div className="card" style={{marginBottom:14}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:12}}>🍽️ Log Food</div><div style={{display:"flex",gap:8,marginBottom:8}}><input className="inp" placeholder="Food name" value={calFood} onChange={e=>setCalFood(e.target.value)} style={{flex:2}}/><input className="inp" placeholder="Cals" value={cal} onChange={e=>setCal(e.target.value)} type="number" style={{flex:1}}/><button className="btn primary" onClick={logCal}>Add</button></div><div style={{display:"flex",justifyContent:"space-between",padding:"10px 14px",background:"rgba(232,82,122,.08)",borderRadius:10,marginTop:8}}><span style={{fontSize:13,color:MUTED}}>Today</span><span style={{fontWeight:700,color:todayCals>(user.goals?.calories||2000)?R:MINT}}>{todayCals} / {user.goals?.calories||"?"} cal</span></div></div>
+        <div className="card" style={{marginBottom:14}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>Today's Log</div>{(user.calLog||[]).filter(c=>c.date===today).length===0?<p style={{color:MUTED,fontSize:13}}>Nothing logged yet.</p>:(user.calLog||[]).filter(c=>c.date===today).map((c,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:13}}><span>{c.food}</span><span style={{color:G}}>{c.cal} cal</span></div>)}</div>
+        <div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🔍 Calorie Lookup</div><AIChat sys="You are a nutrition expert. Give specific calorie counts, macros, and nutrition info for any food. List multiple serving sizes." ph="What are the calories in... (e.g. a Big Mac, 1 cup oatmeal)"/></div>
+      </div>}
+      {tab==="meal"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🥗 Meal Plan Generator</div><AIChat sys="You are a registered dietitian. Create detailed 7-day meal plans with exact foods, portions, and simple prep instructions. Include a grocery list." ph={"Create a 7-day meal plan for "+dietStr+", "+(user.goals?.calories||1500)+" calories, "+(user.goals?.protein||"high")+" protein"}/></div>}
+      {tab==="workout"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>💪 Workout Plan Generator</div><AIChat sys="You are a certified personal trainer. Create complete workout plans with step-by-step instructions for every exercise. Explain how to do each move like teaching someone who has never worked out. Include sets, reps, rest, and beginner modifications." ph={"Create a workout plan for "+actStr+" fitness level focused on weight loss with both cardio and strength training"}/></div>}
+      {tab==="fasting"&&<div>
+        <div className="card" style={{marginBottom:14,textAlign:"center"}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:12}}>⏱️ Fasting Timer</div>{fastStart?<div><div style={{fontSize:28,marginBottom:8}}>⏳</div><div style={{color:MINT,fontSize:14,marginBottom:4}}>Fast in progress!</div><div style={{color:MUTED,fontSize:12,marginBottom:14}}>Started: {new Date(fastStart).toLocaleTimeString()}</div><button className="btn primary" onClick={toggleFast}>Break Fast</button></div>:<div><div style={{marginBottom:14,display:"flex",flexWrap:"wrap",justifyContent:"center",gap:6}}>{["12:12","16:8","18:6","20:4","OMAD 23:1"].map(fw=><span key={fw} className="tag">{fw}</span>)}</div><button className="btn primary" onClick={toggleFast}>Start Fast ⏱️</button></div>}{(user.fastLog||[]).length>0&&<div style={{marginTop:16,textAlign:"left"}}><div style={{fontSize:11,color:MUTED,marginBottom:8}}>Recent Fasts:</div>{[...(user.fastLog||[])].reverse().slice(0,5).map((f,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}}><span>{f.hours} hours</span><span style={{color:MUTED}}>{f.date}</span></div>)}</div>}</div>
+        <div className="card"><AIChat sys="You are an intermittent fasting expert. Explain fasting step by step simply, benefits, hunger tips, what to eat during eating windows." ph="Ask about fasting protocols, hunger tips, how to start..."/></div>
+      </div>}
+      {tab==="macros"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>📊 Macro Calculator</div><AIChat sys="You are a sports nutritionist. Calculate precise macros, explain what macros are simply, give food examples that hit them." ph={"Calculate my macros: current weight "+(last?.w||"?")+"lbs, goal "+goalStr+"lbs, "+dietStr+" diet, "+actStr+" activity"}/></div>}
+      {tab==="habits"&&<div><div className="card" style={{marginBottom:14}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:12}}>✅ Daily Habits</div><div className="g2">{habits.map(h=>{const key=today+"|"+h,done=!!(user.habits?.[key]);return<div key={h} onClick={()=>toggleHabit(h)} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:done?"rgba(125,211,176,.1)":"rgba(255,255,255,.03)",borderRadius:10,cursor:"pointer",border:"1px solid "+(done?"rgba(125,211,176,.25)":BORDER)}}><span style={{fontSize:16}}>{done?"✅":"⬜"}</span><span style={{fontSize:12,color:done?MINT:CREAM}}>{h}</span></div>;})}</div></div><div className="card"><AIChat sys="You are a habit coach. Help build sustainable weight loss habits, break bad ones, and create daily routines. Be compassionate and realistic." ph="Which habit do you struggle with most?"/></div></div>}
+      {tab==="predict"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🔮 Weight Loss Predictor</div><AIChat sys="You are a data-driven weight loss coach. Predict realistic timelines, identify potential plateaus, and give specific advice to accelerate results." ph={"Predict my weight loss: start "+(start?.w||"?")+"lbs, current "+(last?.w||"?")+"lbs, goal "+goalStr+"lbs, "+dietStr+", "+actStr}/></div>}
+      {tab==="emotional"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>💭 Emotional Eating Support</div><AIChat sys="You are a compassionate therapist specializing in emotional eating. Help identify triggers, give coping strategies. Always be warm and non-judgmental." ph="Tell me about stress eating, cravings, or your relationship with food..."/></div>}
+      {tab==="ai"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🤖 AI Weight Loss Coach</div><AIChat sys="You are the world's best weight loss coach combining nutrition science, exercise, behavioral psychology, and hormone health. Give detailed personalized actionable advice." ph="Ask me ANYTHING about your weight loss journey..."/></div>}
+    </div>
+  );
+}
+
+// ── Beauty ───────────────────────────────────────────────────────
+function Beauty({ user, setUser }) {
+  const save = u => persistUser(u, setUser);
+  const [tab, setTab] = useState("profile");
+  const TABS=[["profile","👤 Profile"],["skin","🔬 Skin Analysis"],["makeup","💄 Makeup"],["hair","💇 Hair"],["glasses","👓 Glasses"],["skincare","🧴 Skincare"],["ingredients","🧪 Ingredients"],["color","🎨 Color Analysis"],["brows","🪮 Brows"],["lashes","👁️ Lashes"],["fragrance","🌸 Fragrance"],["aging","⏰ Anti-Aging"],["ai","✨ AI Stylist"]];
+  const [selfie,setSelfie]=useState(null), [skinBusy,setSkinBusy]=useState(false), [skinResult,setSkinResult]=useState("");
+  async function analyzeSkin(){
+    if(!selfie)return alert("Please upload a selfie first!");
+    setSkinBusy(true);setSkinResult("");
+    const r=await askClaudePhoto(selfie,"Analyze my skin from this selfie. Give me:\n1. SKIN RATING out of 10\n2. SKIN TYPE (Oily/Dry/Combination/Normal/Sensitive)\n3. SKIN CONCERNS - list every concern you see (acne, blackheads, pores, pigmentation, redness, dryness, fine lines, texture, dark spots)\n4. WHAT IS GLOWING - what looks great\n5. TOP 3 PRIORITIES\n6. PRODUCT RECOMMENDATIONS\n\nBe detailed, honest, and encouraging. Explain everything simply.","You are a licensed dermatologist and esthetician with 20+ years of experience. Be warm, honest, and encouraging.");
+    setSkinResult(r);
+    const rm=r.match(/rating[:\s]*(\d+)/i)||r.match(/(\d+)\s*\/\s*10/);
+    if(rm){const sl=user.skinLog||[];save({...user,skinLog:[...sl,{src:selfie,date:new Date().toLocaleDateString(),rating:rm[1],analysis:r}]});}
+    setSkinBusy(false);
+  }
+  const looks=["Natural No-Makeup","Soft Glam","Full Glam","Smoky Eye","Cut Crease","Dewy Skin","Bold Lip","Date Night","Office Chic","Festival","Y2K","90s Brown","K-Beauty Glass Skin","E-Girl","Old Hollywood","Bronzed Goddess"];
+  return (
+    <div>
+      <h2 className="sh">Beauty Studio 💄</h2>
+      <div className="tabs">{TABS.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"btn soft"+(tab===k?" on":"")}>{l}</button>)}</div>
+      {tab==="profile"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>👤 Build Your Beauty Profile</div><AIChat sys="You are an expert beauty consultant. Ask about face shape, skin tone, undertone, eye shape, eye color, hair texture, and skin concerns. Give a complete personalized beauty profile with specific recommendations." ph="Describe yourself - face shape, skin tone, eye color, hair type, concerns - I will build your complete beauty profile!"/></div>}
+      {tab==="skin"&&<div>
+        <div className="card" style={{marginBottom:14,border:"1px solid rgba(232,82,122,.3)",background:"linear-gradient(135deg,rgba(232,82,122,.06),rgba(184,160,212,.04))"}}>
+          <div style={{fontSize:13,color:R,fontWeight:700,marginBottom:6}}>✨ AI Skin Analysis from Selfie</div>
+          <p style={{fontSize:12,color:MUTED,marginBottom:12,lineHeight:1.6}}>Upload a clear selfie (no filter, good lighting) and AI will score your skin and identify every concern!</p>
+          <input type="file" accept="image/*" className="inp" style={{marginBottom:10}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{setSelfie(ev.target.result);setSkinResult("");};r.readAsDataURL(f);}}/>
+          {selfie&&<div style={{marginBottom:12}}><img src={selfie} alt="Selfie" style={{width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10,marginBottom:10}}/><button className="btn primary" onClick={analyzeSkin} disabled={skinBusy} style={{width:"100%"}}>{skinBusy?"Analyzing your skin...":"🔬 Analyze My Skin with AI"}</button></div>}
+          {skinBusy&&<div className="shim" style={{height:80,marginTop:10}}/>}
+          {skinResult&&<div className="aout" style={{marginTop:0}}>{skinResult}</div>}
+        </div>
+        <div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>📸 Skin Photo Diary</div><div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>{(user.skinLog||[]).map((p,i)=><div key={i} style={{position:"relative"}}><img src={p.src} alt="" style={{width:"100%",borderRadius:8,aspectRatio:"1",objectFit:"cover"}}/><div style={{position:"absolute",bottom:2,left:2,fontSize:8,background:"rgba(0,0,0,.75)",color:"#fff",padding:"1px 4px",borderRadius:3}}>{p.rating?p.rating+"/10":p.date}</div></div>)}</div></div>
+      </div>}
+      {tab==="makeup"&&<div>
+        <div className="card" style={{marginBottom:14}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>💄 Makeup Looks</div><div style={{display:"flex",flexWrap:"wrap"}}>{looks.map(l=><span key={l} className="tag">💄 {l}</span>)}</div></div>
+        <div className="card" style={{marginBottom:14}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>📖 Step-by-Step Tutorial</div><AIChat sys="You are a professional makeup artist. Give extremely detailed step-by-step tutorials. Explain every step like teaching someone who has never touched makeup. What product, what tool, exactly where, how to blend, how much, in what order." ph="Which makeup look do you want to master? (e.g. smoky eye, no-makeup makeup, bold red lip)"/></div>
+        <div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🎨 Shade Matching</div><AIChat sys="You are a makeup shade matching expert. Help find perfect foundation, concealer, lip color, and blush for different skin tones. Give specific product names and shades from drugstore AND high-end brands." ph="Tell me your skin tone and undertone - I will find your perfect shades!"/></div>
+      </div>}
+      {tab==="hair"&&<div>
+        <div className="card" style={{marginBottom:14}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>💇 Hairstyle Finder</div><div style={{display:"flex",flexWrap:"wrap",marginBottom:12}}>{["Oval","Round","Square","Heart","Diamond","Long","Triangle"].map(f=><span key={f} className="tag">{f} Face</span>)}</div><AIChat sys="You are a master hair stylist. Give detailed recommendations for haircuts, lengths, layers, bangs, and styles for every face shape. Explain why each works, what to ask your stylist. Include celebrity examples." ph="Tell me your face shape and I will find your most flattering cut AND color!"/></div>
+        <div className="card" style={{marginBottom:14}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🎨 Hair Color Guide</div><AIChat sys="You are a master colorist. Recommend the best hair colors and techniques for different skin tones, eye colors, and face shapes. Include specific color names, maintenance tips, and how to explain to a stylist." ph="Tell me your skin tone, eye color, natural hair color - I will find your perfect hair color!"/></div>
+        <div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🌿 Hair Health Coach</div><AIChat sys="You are a trichologist. Assess hair health based on texture, porosity, damage, shedding, and scalp condition. Give treatment plans, product recs, and growth tips." ph="Tell me your hair concerns - I will build your hair health plan!"/></div>
+      </div>}
+      {tab==="glasses"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>👓 Perfect Glasses for Your Face</div><div style={{display:"flex",flexWrap:"wrap",marginBottom:12}}>{["Round","Square","Rectangle","Cat-Eye","Oval","Aviator","Browline","Geometric","Oversized","Rimless"].map(f=><span key={f} className="tag">{f}</span>)}</div><AIChat sys="You are an eyewear specialist. Give detailed advice on glasses and sunglasses for every face shape - why each frame works, what to look for, what to avoid." ph="Tell me your face shape - I will find frames that make you look stunning!"/></div>}
+      {tab==="skincare"&&<div><div className="card" style={{marginBottom:14}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🧴 Skincare Routine Builder</div><div style={{display:"flex",flexWrap:"wrap",marginBottom:12}}>{["Oily","Dry","Combination","Normal","Sensitive","Acne-Prone","Mature","Hyperpigmented"].map(s=><span key={s} className="tag">{s}</span>)}</div><AIChat sys="You are a licensed esthetician. Build complete AM and PM skincare routines. Explain every product - what it does, why you need it, how to apply it, what order. Include budget drugstore options." ph="Tell me your skin type, concerns, and budget - I will build your perfect AM and PM routine!"/></div><div className="card"><AIChat sys="You are a dermatologist and skincare educator. Explain skin conditions, treatments, ingredients simply." ph="Ask about any skin condition - acne, dark spots, eczema, anti-aging..."/></div></div>}
+      {tab==="ingredients"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🧪 Ingredient Analyzer and Toxicity Checker</div><p style={{color:BLUSH,fontSize:12,marginBottom:12}}>She Glows is ingredient-honest - we tell you what is actually good and what is not!</p><AIChat sys="You are a cosmetic chemist and ingredient safety expert. Analyze skincare ingredients - what they do, safety rating, potential concerns, who should avoid them, better alternatives. Be completely honest and unbiased." ph="Paste a product ingredient list OR ask about a specific ingredient!"/></div>}
+      {tab==="color"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🎨 Seasonal Color Analysis</div><AIChat sys="You are a professional color analyst. Determine someone's season and give a complete color palette - best clothing colors, worst colors, makeup shades, hair colors, metal tones." ph="Tell me your eye color, natural hair color, skin tone, and gold or silver preference!"/></div>}
+      {tab==="brows"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🪮 Perfect Your Brows</div><AIChat sys="You are a professional brow artist. Give step-by-step instructions for shaping, filling, and styling brows for every face shape. Talk like teaching a complete beginner." ph="Tell me your face shape and brow situation - I will give you step-by-step instructions!"/></div>}
+      {tab==="lashes"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>👁️ Complete Lash Guide</div><AIChat sys="You are a lash technician. Cover everything - false lashes, extensions types and maintenance, lash serums, mascara techniques, and lash health. Step by step like talking to a 5-year-old." ph="Ask about false lashes, extensions, growth, mascara technique..."/></div>}
+      {tab==="fragrance"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🌸 Fragrance Matching</div><AIChat sys="You are a fragrance expert. Match people to scents based on personality, preferences, lifestyle. Explain fragrance families, notes, longevity. Include drugstore dupes for designers." ph="Tell me your vibe and what scents you love or hate - I will match your perfect fragrance!"/></div>}
+      {tab==="aging"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>⏰ Anti-Aging Guide</div><AIChat sys="You are an anti-aging skincare expert. Explain how skin ages, effective ingredients and treatments, and lifestyle changes. Be honest about what works." ph="Ask about anti-aging routines, retinol, collagen, preventative care..."/></div>}
+      {tab==="ai"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>✨ AI Beauty Stylist</div><AIChat sys="You are the world's ultimate beauty expert - makeup artistry, hair styling, esthetics, color analysis, fragrance, nail artistry, personal styling. Give detailed personalized advice. Always include budget options." ph="Ask me ANYTHING about beauty 💕"/></div>}
+    </div>
+  );
+}
+
+// ── Nails ────────────────────────────────────────────────────────
+function Nails({ user, setUser }) {
+  const [tab, setTab] = useState("ideas");
+  const TABS=[["ideas","💅 Ideas"],["acrylic","🔮 Acrylics"],["gel","✨ Gel"],["press","💜 Press-Ons"],["art","🎨 Nail Art"],["care","🌸 Nail Care"],["removal","🧼 Removal"],["ai","🤖 Nail AI"]];
+  const ideas=[{n:"French Tips",e:"🤍"},{n:"Ombre",e:"🌅"},{n:"Marble",e:"🪨"},{n:"Chrome",e:"✨"},{n:"Florals",e:"🌸"},{n:"Abstract",e:"🎨"},{n:"Negative Space",e:"⬜"},{n:"Glitter",e:"🌟"},{n:"Glazed Donut",e:"🍩"},{n:"Coffin Shape",e:"⚫"},{n:"Almond Shape",e:"🤎"},{n:"Stiletto",e:"💎"},{n:"Cow Print",e:"🐄"},{n:"Velvet",e:"🟣"},{n:"Foil Accents",e:"🥇"},{n:"Line Art",e:"✏️"},{n:"Tortoiseshell",e:"🐢"},{n:"Holographic",e:"🌈"}];
+  return (
+    <div>
+      <h2 className="sh">Nail Studio 💅</h2>
+      <div className="tabs">{TABS.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"btn soft"+(tab===k?" on":"")}>{l}</button>)}</div>
+      {tab==="ideas"&&<div><div className="g3" style={{marginBottom:14}}>{ideas.map(n=><div key={n.n} className="card" style={{textAlign:"center",padding:12,cursor:"pointer"}} onClick={()=>setTab("ai")}><div style={{fontSize:26}}>{n.e}</div><div style={{fontSize:11,fontWeight:600,color:CREAM,marginTop:5}}>{n.n}</div></div>)}</div><div className="card"><AIChat sys="You are a top nail artist and trend expert. Describe nail looks in vivid detail - colors, designs, finishes, shapes." ph="Tell me your vibe or occasion - I will give you stunning nail ideas!"/></div></div>}
+      {tab==="acrylic"&&<div className="card"><p style={{color:BLUSH,fontSize:12,marginBottom:12}}>Every single step, explained for a complete beginner! 💕</p><AIChat sys="You are a professional nail technician with 15+ years of acrylic experience. Explain EVERYTHING step by step like teaching a 5-year-old: supplies needed, nail prep, applying tips vs forms, mixing and applying acrylic, filing, shaping, buffing, top coat, fill-ins, and common mistakes." ph="Teach me how to do acrylic nails from scratch!" init="Walk me through doing acrylic nails step by step from absolute scratch - I have never done them before."/></div>}
+      {tab==="gel"&&<div className="card"><AIChat sys="You are a professional nail tech specializing in gel nails. Explain everything from scratch - gel types, supplies, every application step, curing times, extensions, and safe removal. Step by step like talking to a 5-year-old." ph="Teach me everything about gel nails from scratch!" init="Explain everything about gel nails step by step for a complete beginner."/></div>}
+      {tab==="press"&&<div className="card"><AIChat sys="You are a press-on nail expert. Cover everything - prep, applying press-ons to last 2+ weeks, sizing, fixing lifting, safe removal, best brands at every price point." ph="Teach me everything about press-ons!" init="Walk me through using press-on nails step by step so they last as long as possible."/></div>}
+      {tab==="art"&&<div className="card"><AIChat sys="You are a nail artist and educator. Give extremely detailed step-by-step nail art instructions. Explain every tool and how to use them. Walk through designs like teaching a 5-year-old." ph="Which nail art do you want to learn? (ombre, marble, floral, glazed donut, chrome)"/></div>}
+      {tab==="care"&&<div className="card"><AIChat sys="You are a nail health specialist. Explain how to grow stronger longer nails, treat damage, care for cuticles, deal with ridges, peeling, yellowing, and breaking." ph="Tell me your nail concerns - I will build your nail health routine!"/></div>}
+      {tab==="removal"&&<div className="card"><AIChat sys="You are a nail technician specializing in safe removal. Walk through step-by-step safe removal for acrylics, gel, press-ons, and dip powder. Include supplies needed and common mistakes." ph="What do you need to remove? (acrylics, gel polish, gel extensions, press-ons, dip powder)"/></div>}
+      {tab==="ai"&&<div className="card"><AIChat sys="You are the world's best nail technician and nail artist. You know everything - acrylics, gel, press-ons, nail art, nail health, techniques, trends. Detailed step-by-step answers always." ph="Ask me ANYTHING about nails! 💅"/></div>}
+    </div>
+  );
+}
+
+// ── Fashion ──────────────────────────────────────────────────────
+function Fashion({ user, setUser }) {
+  const [tab, setTab] = useState("style");
+  const TABS=[["style","👗 My Style"],["body","📐 Body Shape"],["face","🫶 Face Shape"],["outfits","👚 Outfits"],["budget","💰 Budget Finds"],["capsule","🎒 Capsule"],["occasion","🎉 Occasion"],["pairing","💄 Full Look"],["ai","🛍️ AI Stylist"]];
+  const [bodyPhoto,setBodyPhoto]=useState(null), [bodyResult,setBodyResult]=useState(""), [bodyBusy,setBodyBusy]=useState(false);
+  const [facePhoto,setFacePhoto]=useState(null), [faceResult,setFaceResult]=useState(""), [faceBusy,setFaceBusy]=useState(false);
+  async function analyzeBody(){if(!bodyPhoto)return alert("Please upload a full body photo first!");setBodyBusy(true);setBodyResult("");const r=await askClaudePhoto(bodyPhoto,"Analyze this full body photo and tell me:\n\nBODY SHAPE - identify: Hourglass, Pear/Triangle, Apple/Oval, Rectangle/Straight, or Inverted Triangle. Explain WHY based on what you observe.\n\nMY BUILD - describe general build (petite, average, athletic, curvy, plus, tall)\n\nFASHION GUIDE for my exact shape:\n- Best clothing silhouettes, waistlines, necklines, and cuts\n- What makes me look most proportioned and fabulous\n- What to avoid and why\n- Specific clothing item recommendations\n- Celebrity style inspos\n\nBe detailed, warm, body-positive, and encouraging!","You are a body-positive fashion stylist. Always celebrate every body type. Be warm and encouraging.");setBodyResult(r);setBodyBusy(false);}
+  async function analyzeFace(){if(!facePhoto)return alert("Please upload a clear selfie first!");setFaceBusy(true);setFaceResult("");const r=await askClaudePhoto(facePhoto,"Analyze my face and tell me:\n\nFACE SHAPE - identify: Oval, Round, Square, Heart, Diamond, Oblong, or Triangle. Explain WHY.\n\nMY FEATURES - note eye shape, brow bone, jawline, forehead width\n\nPERSONALIZED BEAUTY GUIDE:\nMAKEUP - contouring, highlight, blush placement, brow shape, eye makeup\nHAIR - best cuts, lengths, layers, bangs\nGLASSES - best frame shapes for glasses AND sunglasses\nBROWS - ideal shape and arch\n\nBe detailed, warm, and encouraging!","You are an expert face shape analyst, makeup artist, hair stylist, and eyewear specialist. Be warm and encouraging.");setFaceResult(r);setFaceBusy(false);}
+  return (
+    <div>
+      <h2 className="sh">Fashion Studio 👗</h2>
+      <div className="tabs">{TABS.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"btn soft"+(tab===k?" on":"")}>{l}</button>)}</div>
+      {tab==="style"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>👗 Discover Your Style Identity</div><div style={{display:"flex",flexWrap:"wrap",marginBottom:12}}>{["Casual Chic","Boho","Clean Minimal","Edgy","Soft Romantic","Preppy","Athleisure","Cottagecore","Dark Academia","Y2K","Old Money","Street Style","Maximalist","Quiet Luxury","Mob Wife","Coastal"].map(s=><span key={s} className="tag">{s}</span>)}</div><AIChat sys="You are a celebrity personal stylist. Help people discover their unique style identity - what they're drawn to, how to define their aesthetic, how to build a wardrobe around it." ph="Tell me your personality, what you love, what you hate, your lifestyle - I will find your style identity!"/></div>}
+      {tab==="body"&&<div>
+        <div className="card" style={{marginBottom:14,border:"1px solid rgba(232,82,122,.3)",background:"linear-gradient(135deg,rgba(232,82,122,.07),rgba(201,151,58,.04))"}}>
+          <div style={{fontSize:13,color:R,fontWeight:700,marginBottom:6}}>📸 Not sure of your body shape? Let AI tell you!</div>
+          <p style={{fontSize:12,color:MUTED,marginBottom:12,lineHeight:1.7}}>Upload a full body photo and AI will identify your exact body shape AND give you personalized fashion advice!</p>
+          <p style={{fontSize:11,color:MUTED,marginBottom:10,fontStyle:"italic"}}>Tips: stand straight, wear form-fitting clothes, photo from the front, plain background</p>
+          <input type="file" accept="image/*" className="inp" style={{marginBottom:10}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{setBodyPhoto(ev.target.result);setBodyResult("");};r.readAsDataURL(f);}}/>
+          {bodyPhoto&&<div style={{marginBottom:12}}><img src={bodyPhoto} alt="Body" style={{width:"100%",maxHeight:280,objectFit:"contain",borderRadius:10,marginBottom:10}}/><button className="btn primary" onClick={analyzeBody} disabled={bodyBusy} style={{width:"100%"}}>{bodyBusy?"Analyzing your body shape...":"🔍 Tell Me My Body Shape + Fashion Tips"}</button></div>}
+          {bodyBusy&&<div className="shim" style={{height:70,marginTop:8}}/>}
+          {bodyResult&&<div className="aout" style={{marginTop:0}}>{bodyResult}</div>}
+        </div>
+        <div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>📐 Fashion Guide by Body Shape</div><div style={{display:"flex",flexWrap:"wrap",marginBottom:12}}>{["Hourglass","Pear/Triangle","Apple/Oval","Rectangle","Inverted Triangle","Petite","Plus Size","Tall"].map(s=><span key={s} className="tag">{s}</span>)}</div><AIChat sys="You are a body-positive fashion stylist. Detailed advice on cuts, silhouettes, waistlines, necklines, fabrics. Encouraging and celebratory." ph="Tell me your body shape - I will give you your complete fashion guide!"/></div>
+      </div>}
+      {tab==="face"&&<div>
+        <div className="card" style={{marginBottom:14,border:"1px solid rgba(184,160,212,.3)",background:"linear-gradient(135deg,rgba(184,160,212,.07),rgba(232,82,122,.04))"}}>
+          <div style={{fontSize:13,color:LAV,fontWeight:700,marginBottom:6}}>📸 Not sure of your face shape? Let AI tell you!</div>
+          <p style={{fontSize:12,color:MUTED,marginBottom:12,lineHeight:1.7}}>Upload a clear selfie and AI will identify your face shape AND give personalized recommendations for makeup, hair, glasses, and brows!</p>
+          <p style={{fontSize:11,color:MUTED,marginBottom:10,fontStyle:"italic"}}>Tips: face camera straight on, pull hair back, natural lighting, no heavy filters</p>
+          <input type="file" accept="image/*" className="inp" style={{marginBottom:10}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{setFacePhoto(ev.target.result);setFaceResult("");};r.readAsDataURL(f);}}/>
+          {facePhoto&&<div style={{marginBottom:12}}><img src={facePhoto} alt="Face" style={{width:"100%",maxHeight:260,objectFit:"contain",borderRadius:10,marginBottom:10}}/><button className="btn primary" onClick={analyzeFace} disabled={faceBusy} style={{width:"100%",background:"linear-gradient(135deg,#B8A0D4,#E8527A)"}}>{faceBusy?"Analyzing your face shape...":"🔍 Tell Me My Face Shape + Beauty Tips"}</button></div>}
+          {faceBusy&&<div className="shim" style={{height:70,marginTop:8}}/>}
+          {faceResult&&<div className="aout" style={{marginTop:0,borderColor:"rgba(184,160,212,.25)"}}>{faceResult}</div>}
+        </div>
+        <div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🫶 Face Shape Beauty Guide</div><div style={{display:"flex",flexWrap:"wrap",marginBottom:12}}>{["Oval","Round","Square","Heart","Diamond","Oblong","Triangle"].map(s=><span key={s} className="tag">{s} Face</span>)}</div><AIChat sys="You are a face shape expert. Give specific recommendations per shape for makeup, hair, brows, and glasses. Explain simply and enthusiastically." ph="Tell me your face shape - I will give you your complete beauty guide!"/></div>
+      </div>}
+      {tab==="outfits"&&<div className="card"><AIChat sys="You are a creative stylist. Build complete head-to-toe outfits - top, bottom, shoes, bag, jewelry, outerwear. Budget shopping options always." ph="Tell me the occasion, your style, and body type - I will build a complete outfit!"/></div>}
+      {tab==="budget"&&<div className="card"><p style={{color:BLUSH,fontSize:12,marginBottom:12}}>Cheapest options from Walmart, Target, Amazon, Shein, ThredUp, TJ Maxx and more!</p><AIChat sys="You are a budget fashion expert. Always find CHEAPEST options first - Walmart, Target, Amazon, Shein, H&M, ThredUp, Poshmark, TJ Maxx, Marshalls. Give estimated prices. Designer looks for under $50." ph="Tell me what you need and your budget - I will find the most affordable options!"/></div>}
+      {tab==="capsule"&&<div className="card"><AIChat sys="You are a minimalist wardrobe expert. Create capsule wardrobes tailored to body type, style, lifestyle, and budget. List every piece and how to style it multiple ways." ph="Tell me your style, body type, lifestyle, and budget - I will build your capsule wardrobe!"/></div>}
+      {tab==="occasion"&&<div className="card"><div style={{display:"flex",flexWrap:"wrap",marginBottom:12}}>{["First Date","Job Interview","Wedding Guest","Girls Night","Beach/Vacation","Work/Office","Casual Weekend","Birthday Party","Holiday Dinner","Gym/Active"].map(o=><span key={o} className="tag">{o}</span>)}</div><AIChat sys="You are an occasion styling expert. Complete outfit recommendations for any event - dress code, what to wear, accessories, shoes, bag, hair and makeup pairing." ph="Tell me the occasion and your style - I will give you the perfect outfit!"/></div>}
+      {tab==="pairing"&&<div className="card"><p style={{color:MUTED,fontSize:12,marginBottom:12}}>Outfit + makeup + hair + nails + accessories + fragrance all working together!</p><AIChat sys="You are a total look expert. Pair outfits with perfect makeup, hairstyle, nail color, accessories, fragrance. Explain why each works together." ph="Tell me your outfit or occasion - I will pair the perfect complete look!"/></div>}
+      {tab==="ai"&&<div className="card"><AIChat sys="You are the world's best personal stylist. Fashion trends, body dressing, personal style, capsule wardrobes, budget shopping. Body-positive. Always include budget options." ph="Ask me ANYTHING about fashion and style 👗"/></div>}
+    </div>
+  );
+}
+
+// ── BodyTracker ──────────────────────────────────────────────────
+function BodyTracker({ user, setUser }) {
+  const save = u => persistUser(u, setUser);
+  const [tab, setTab] = useState("measure");
+  const TABS=[["measure","📏 Measurements"],["history","📊 History"],["photos","📸 Photos"],["analysis","🔍 Analysis"],["cycle","🌸 Cycle Sync"]];
+  const [m, setM] = useState(user.measurements||{});
+  const [bodyPhoto,setBodyPhoto]=useState(null), [estimating,setEstimating]=useState(false), [estimateResult,setEstimateResult]=useState("");
+  const fields=[["Bust/Chest","bust"],["Waist","waist"],["Hips","hips"],["Thighs","thighs"],["Upper Arms","arms"],["Calves","calves"],["Neck","neck"],["Shoulders","shoulders"],["Height (in)","height"],["Weight (lbs)","weight"]];
+  async function estimateMeasurements(){
+    if(!bodyPhoto)return alert("Please upload a full body photo first!");
+    setEstimating(true);setEstimateResult("");
+    const hNote=m.height?"The person's height is "+m.height+" inches - use this to calibrate all estimates.":"Please also estimate approximate height.";
+    const r=await askClaudePhoto(bodyPhoto,"Please analyze this full body photo and estimate body measurements. "+hNote+"\n\nProvide estimated measurements in inches for:\n- Bust/Chest\n- Waist\n- Hips\n- Thighs\n- Upper Arms\n- Calves\n- Neck\n- Shoulder Width\n- Height (if not provided)\n- Estimated weight range\n\nAlso identify:\nBODY SHAPE: (Hourglass / Pear / Apple / Rectangle / Inverted Triangle)\nBODY BUILD: (Petite / Average / Athletic / Curvy / Plus Size)\n\nBe warm and body-positive. Note these are AI visual estimates.","You are an expert body analyst. Estimate measurements from photos accurately. Always be body-positive and transparent that these are visual estimates.");
+    setEstimateResult(r);
+    const bustM=r.match(/bust[^0-9]*([0-9]+)/i),waistM=r.match(/waist[^0-9]*([0-9]+)/i),hipsM=r.match(/hip[^0-9]*([0-9]+)/i);
+    const upd={...m};
+    if(bustM)upd.bust=bustM[1];if(waistM)upd.waist=waistM[1];if(hipsM)upd.hips=hipsM[1];
+    setM(upd);setEstimating(false);
+  }
+  function doSave(){const entry={...m,date:new Date().toLocaleDateString(),ts:Date.now()};save({...user,measurements:m,measureHistory:[...(user.measureHistory||[]),entry]});alert("Measurements saved! 📏");}
+  const initAnalysis=m.bust?"Analyze my measurements: Bust "+m.bust+" inches, Waist "+m.waist+" inches, Hips "+m.hips+" inches, Height "+m.height+" inches, Weight "+m.weight+" lbs. Give my body shape, BMI, ideal weight range, most flattering clothing styles, and personalized fitness tips.":"";
+  return (
+    <div>
+      <h2 className="sh">Body Tracker 📏</h2>
+      <div className="tabs">{TABS.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"btn soft"+(tab===k?" on":"")}>{l}</button>)}</div>
+      {tab==="measure"&&<div>
+        <div className="card" style={{marginBottom:14,border:"1px solid rgba(125,211,176,.25)",background:"linear-gradient(135deg,rgba(125,211,176,.06),rgba(184,160,212,.04))"}}>
+          <div style={{fontSize:13,color:MINT,fontWeight:700,marginBottom:6}}>📸 No tape measure? No problem!</div>
+          <p style={{fontSize:12,color:MUTED,marginBottom:12,lineHeight:1.7}}>Upload a full body photo and AI will estimate all your measurements for you! Enter your height first for best accuracy.</p>
+          <div style={{marginBottom:10}}><label style={{fontSize:11,color:MUTED,display:"block",marginBottom:4}}>Your height in inches (optional but helps accuracy)</label><input className="inp" type="number" placeholder="e.g. 65 for 5ft 5in" value={m.height||""} onChange={e=>setM(p=>({...p,height:e.target.value}))}/></div>
+          <input type="file" accept="image/*" className="inp" style={{marginBottom:10}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{setBodyPhoto(ev.target.result);setEstimateResult("");};r.readAsDataURL(f);}}/>
+          {bodyPhoto&&<div style={{marginBottom:12}}><img src={bodyPhoto} alt="Body" style={{width:"100%",maxHeight:280,objectFit:"contain",borderRadius:10,marginBottom:10}}/><button className="btn primary" onClick={estimateMeasurements} disabled={estimating} style={{width:"100%",background:"linear-gradient(135deg,#7DD3B0,#B8A0D4)"}}>{estimating?"Estimating your measurements...":"📏 Estimate My Measurements with AI"}</button></div>}
+          {estimating&&<div className="shim" style={{height:70,marginTop:8}}/>}
+          {estimateResult&&<div><div className="aout" style={{marginTop:0,borderColor:"rgba(125,211,176,.25)"}}>{estimateResult}</div><p style={{fontSize:11,color:MINT,marginTop:8}}>Some measurements have been auto-filled below. Review and adjust, then save!</p></div>}
+        </div>
+        <div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:4}}>📏 Your Measurements (inches)</div><p style={{fontSize:11,color:MUTED,marginBottom:14}}>Review AI estimates or fill in manually with a tape measure.</p><div className="g2">{fields.map(([label,key])=><div key={key}><label style={{fontSize:11,color:MUTED,display:"block",marginBottom:3}}>{label}</label><input className="inp" type="number" value={m[key]||""} onChange={e=>setM(p=>({...p,[key]:e.target.value}))}/></div>)}</div><button className="btn primary" onClick={doSave} style={{width:"100%",marginTop:14}}>Save Measurements 📏</button></div>
+      </div>}
+      {tab==="history"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:12}}>📊 History</div>{(user.measureHistory||[]).length===0?<p style={{color:MUTED,fontSize:13}}>No history yet!</p>:[...(user.measureHistory||[])].reverse().map((entry,i)=><div key={i} style={{padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}}><div style={{color:G,fontSize:11,marginBottom:5}}>{entry.date}</div><div style={{display:"flex",flexWrap:"wrap",gap:8}}>{fields.filter(([,k])=>entry[k]).map(([l,k])=><span key={k} style={{fontSize:12}}><span style={{color:MUTED}}>{l.split(" ")[0]}:</span> <span style={{color:BLUSH}}>{entry[k]}"</span></span>)}</div></div>)}</div>}
+      {tab==="photos"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>📸 Progress Photos</div><input type="file" accept="image/*" className="inp" style={{marginBottom:12}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>save({...user,progressPhotos:[...(user.progressPhotos||[]),{src:ev.target.result,date:new Date().toLocaleDateString()}]});r.readAsDataURL(f);}}/><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>{(user.progressPhotos||[]).map((p,i)=><div key={i} style={{position:"relative"}}><img src={p.src} alt="" style={{width:"100%",borderRadius:8,aspectRatio:"1",objectFit:"cover"}}/><div style={{position:"absolute",bottom:2,left:2,fontSize:9,background:"rgba(0,0,0,.75)",color:"#fff",padding:"1px 4px",borderRadius:3}}>{p.date}</div></div>)}</div></div>}
+      {tab==="analysis"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🔍 Body Analysis</div><AIChat sys="You are an expert body composition analyst, trainer, and stylist. Analyze measurements to determine body shape, BMI, ideal weight range, most flattering clothing styles, and personalized fitness tips. Be encouraging and body-positive." ph="Analyze my body!" init={initAnalysis}/></div>}
+      {tab==="cycle"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>🌸 Cycle Syncing Guide</div><AIChat sys="You are a women's health expert specializing in cycle syncing. Explain each phase (menstrual, follicular, ovulatory, luteal), how to optimize workouts, nutrition, skincare, and energy for each phase." ph="Tell me your cycle phase or length - I will sync your entire routine to your hormones!"/></div>}
+    </div>
+  );
+}
+
+// ── SkinTracker ──────────────────────────────────────────────────
+function SkinTracker({ user, setUser }) {
+  const save = u => persistUser(u, setUser);
+  const [tab, setTab] = useState("log");
+  const TABS=[["log","📝 Daily Log"],["trends","📈 Trends"],["ai","🔬 AI Dermatologist"]];
+  const [entry,setEntry]=useState({rating:"",concerns:"",products:"",water:"",sleep:"",stress:"",diet:""});
+  const [selfie,setSelfie]=useState(null), [analyzing,setAnalyzing]=useState(false), [aiAnalysis,setAiAnalysis]=useState("");
+  async function analyzeSkin(){
+    if(!selfie)return alert("Please upload a selfie first!");
+    setAnalyzing(true);setAiAnalysis("");
+    const r=await askClaudePhoto(selfie,"Please analyze my skin carefully from this selfie. Give me:\n1. SKIN RATING out of 10 (honest but kind)\n2. SKIN TYPE: Oily, Dry, Combination, Normal, or Sensitive\n3. SKIN CONCERNS: List every concern you see (acne, blackheads, pores, pigmentation, redness, dryness, fine lines, texture, dark spots)\n4. WHAT IS GLOWING: What looks great about my skin\n5. TOP 3 PRIORITIES: Most important things to focus on\n6. PRODUCT RECOMMENDATIONS: Specific product types I need\n\nBe detailed, honest, and encouraging. Explain everything simply.","You are a licensed dermatologist and esthetician with 20+ years of experience. Be warm, honest, and encouraging.");
+    setAiAnalysis(r);
+    const rm=r.match(/rating[:\s]*(\d+)/i)||r.match(/(\d+)\s*\/\s*10/);
+    if(rm)setEntry(p=>({...p,rating:rm[1],concerns:"See AI analysis above"}));
+    setAnalyzing(false);
+  }
+  function doSave(){
+    if(!entry.rating)return alert("Please get your AI skin analysis or enter a rating first!");
+    const sl=user.skinTracker||[];
+    save({...user,skinTracker:[...sl,{...entry,aiAnalysis,selfie:selfie||null,date:new Date().toLocaleDateString(),ts:Date.now()}]});
+    setEntry({rating:"",concerns:"",products:"",water:"",sleep:"",stress:"",diet:""});
+    setSelfie(null);setAiAnalysis("");
+    alert("Skin log saved! 🌟");
+  }
+  return (
+    <div>
+      <h2 className="sh">Skin Tracker 🔬</h2>
+      <div className="tabs">{TABS.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"btn soft"+(tab===k?" on":"")}>{l}</button>)}</div>
+      {tab==="log"&&<div>
+        <div className="card" style={{marginBottom:14,border:"1px solid rgba(232,82,122,.3)",background:"linear-gradient(135deg,rgba(232,82,122,.06),rgba(184,160,212,.04))"}}>
+          <div style={{fontSize:13,color:R,fontWeight:700,marginBottom:4}}>✨ AI Skin Analysis from Selfie</div>
+          <p style={{fontSize:12,color:MUTED,marginBottom:12,lineHeight:1.6}}>Upload a clear selfie (no filter, good lighting) and AI will score your skin and identify every concern!</p>
+          <input type="file" accept="image/*" className="inp" style={{marginBottom:10}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{setSelfie(ev.target.result);setAiAnalysis("");};r.readAsDataURL(f);}}/>
+          {selfie&&<div style={{marginBottom:12}}><img src={selfie} alt="Selfie" style={{width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10,marginBottom:10}}/><button className="btn primary" onClick={analyzeSkin} disabled={analyzing} style={{width:"100%"}}>{analyzing?"Analyzing your skin... give me a moment":"🔬 Analyze My Skin with AI"}</button></div>}
+          {analyzing&&<div className="shim" style={{height:80,marginTop:10}}/>}
+          {aiAnalysis&&<div><div className="aout" style={{marginTop:0}}>{aiAnalysis}</div><p style={{fontSize:11,color:G,marginTop:10}}>Your skin rating and concerns have been auto-filled below. Add the rest and save!</p></div>}
+        </div>
+        <div className="card">
+          <div style={{fontSize:12,color:G,fontWeight:600,marginBottom:14}}>📝 Complete Your Daily Log</div>
+          <div style={{marginBottom:12}}><label style={{fontSize:11,color:MUTED,display:"block",marginBottom:4}}>Skin Rating (1-10)</label><input className="inp" type="number" min="1" max="10" value={entry.rating} onChange={e=>setEntry(p=>({...p,rating:e.target.value}))} placeholder="1-10"/></div>
+          {[["Skin Concerns Today","concerns","Breakouts, dryness, oiliness... (or use AI above)"],["Products Used","products","Cleanser, toner, moisturizer, SPF..."],["Water Intake","water","How many cups today?"],["Sleep Last Night","sleep","How many hours?"],["Stress Level","stress","Low / Medium / High"],["Diet Today","diet","Any trigger foods? (dairy, sugar, etc.)"]].map(([l,k,ph])=>(
+            <div key={k} style={{marginBottom:10}}><label style={{fontSize:11,color:MUTED,display:"block",marginBottom:3}}>{l}</label><input className="inp" placeholder={ph} value={entry[k]} onChange={e=>setEntry(p=>({...p,[k]:e.target.value}))}/></div>
+          ))}
+          <button className="btn primary" onClick={doSave} style={{width:"100%",marginTop:6}}>Save Skin Log 🌟</button>
+        </div>
+      </div>}
+      {tab==="trends"&&<div className="card"><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:12}}>📈 Skin History</div>{(user.skinTracker||[]).length===0?<p style={{color:MUTED,fontSize:13}}>No entries yet. Start logging daily!</p>:[...(user.skinTracker||[])].reverse().slice(0,20).map((e,i)=><div key={i} style={{padding:"12px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:11,color:MUTED}}>{e.date}</span><span style={{color:parseInt(e.rating)>=7?MINT:parseInt(e.rating)>=4?G:R,fontWeight:700,fontSize:13}}>⭐ {e.rating}/10</span></div>{e.selfie&&<img src={e.selfie} alt="" style={{width:48,height:48,borderRadius:8,objectFit:"cover",marginBottom:6}}/>}{e.concerns&&<div style={{fontSize:12,color:CREAM,marginBottom:3}}>{e.concerns}</div>}{e.aiAnalysis&&<details style={{marginTop:4}}><summary style={{fontSize:11,color:R,cursor:"pointer"}}>View full AI analysis</summary><div style={{fontSize:12,color:CREAM,marginTop:6,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{e.aiAnalysis}</div></details>}</div>)}</div>}
+      {tab==="ai"&&<div className="card"><AIChat sys="You are a dermatologist and esthetician with 20+ years of experience. Diagnose skin concerns, recommend treatments, explain conditions. Explain simply. Note when professional consultation is needed." ph="Describe any skin concern - I will give you a dermatologist-level assessment!"/></div>}
+    </div>
+  );
+}
+
+// ── TryOn ────────────────────────────────────────────────────────
+function TryOn({ user }) {
+  const [photo,setPhoto]=useState(null), [item,setItem]=useState(""), [result,setResult]=useState(""), [busy,setBusy]=useState(false);
+  const [tab,setTab]=useState("outfit");
+  const TABS=[["outfit","👗 Outfit"],["hair","💇 Hair"],["makeup","💄 Makeup"],["glasses","👓 Glasses"]];
+  async function go(){
+    if(!photo)return alert("Upload your photo first!");
+    if(!item.trim())return alert("Tell me what you want to try on!");
+    setBusy(true);setResult("");
+    const prompts={
+      outfit:"Based on my photo and body shape, describe in vivid detail how this outfit would look on me: "+item+". Cover fit, what looks great, what to watch for, styling tips, and where to buy cheap.",
+      hair:"I want to try this hairstyle: "+item+". Based on my face shape and features, would it be flattering? What would look amazing, what to tell a stylist, any modifications for my face?",
+      makeup:"I want to see how this makeup look would look on me: "+item+". Based on my features, describe how each element appears on my face, what would be most flattering, and give a step-by-step tutorial.",
+      glasses:"I want to try these frames: "+item+". Based on my face shape in the photo, would they flatter me? Why or why not? Give detailed alternatives."
+    };
+    const r=await askClaudePhoto(photo,prompts[tab],"You are a virtual stylist. Give a detailed, vivid, encouraging assessment. Be specific about features. Always be body-positive.");
+    setResult(r);setBusy(false);
+  }
+  return (
+    <div>
+      <h2 className="sh">Virtual Try-On ✨</h2>
+      <p style={{color:MUTED,fontSize:13,marginBottom:16}}>Upload your photo and try on outfits, hairstyles, makeup, and glasses before you commit!</p>
+      <div className="tabs">{TABS.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"btn soft"+(tab===k?" on":"")}>{l}</button>)}</div>
+      <div className="card" style={{marginBottom:14}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:8}}>📸 Your Photo</div><input type="file" accept="image/*" className="inp" style={{marginBottom:10}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setPhoto(ev.target.result);r.readAsDataURL(f);}}/>{photo&&<img src={photo} alt="You" style={{width:"100%",maxHeight:260,objectFit:"contain",borderRadius:12}}/>}</div>
+      <div className="card">
+        <div style={{fontSize:12,color:G,fontWeight:600,marginBottom:8}}>{tab==="outfit"?"👗 Describe the Outfit":tab==="hair"?"💇 Describe the Hairstyle":tab==="makeup"?"💄 Describe the Makeup Look":"👓 Describe the Frames"}</div>
+        <textarea className="inp" placeholder={tab==="outfit"?"e.g. High-waist wide-leg jeans, white crop blazer, nude heels":tab==="hair"?"e.g. Long beach waves with honey blonde balayage, curtain bangs":tab==="makeup"?"e.g. Soft glam: champagne lid, soft wing, peach lip, dewy skin":"e.g. Oversized tortoiseshell cat-eye frames"} value={item} onChange={e=>setItem(e.target.value)} style={{marginBottom:12}}/>
+        <button className="btn primary" onClick={go} disabled={busy} style={{width:"100%"}}>{busy?"Styling you... ✨":"Try It On! ✨"}</button>
+        {result&&<div className="aout">{result}</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── Wellness ─────────────────────────────────────────────────────
+function Wellness({ user, setUser }) {
+  const save = u => persistUser(u, setUser);
+  const [tab, setTab] = useState("mental");
+  const TABS=[["mental","🧘 Mental Health"],["sleep","😴 Sleep"],["supplements","💊 Supplements"],["journal","📓 Journal"],["stress","😤 Stress"],["hormone","🌸 Hormones"],["meditation","🕯️ Meditation"]];
+  const [journalEntry,setJournalEntry]=useState("");
+  function saveJournal(){if(!journalEntry.trim())return;save({...user,journal:[...(user.journal||[]),{entry:journalEntry,date:new Date().toLocaleDateString(),ts:Date.now()}]});setJournalEntry("");alert("Saved 💕");}
+  return (
+    <div>
+      <h2 className="sh">Wellness Hub 🌸</h2>
+      <div className="tabs">{TABS.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"btn soft"+(tab===k?" on":"")}>{l}</button>)}</div>
+      {tab==="mental"&&<div className="card"><p style={{color:MUTED,fontSize:12,marginBottom:12}}>Safe space 💕 Always seek professional help for serious concerns.</p><AIChat sys="You are a warm, compassionate wellness coach. Provide mental health support, self-care strategies, coping techniques, and confidence building. Always be non-judgmental. Recommend professional help for serious concerns." ph="How are you feeling? Tell me what is on your mind - I am here 💕"/></div>}
+      {tab==="sleep"&&<div className="card"><AIChat sys="You are a sleep specialist. Explain how sleep affects beauty, skin, weight loss, and aging. Give detailed sleep hygiene routines and practical tips. Include daytime habits AND bedtime routines." ph="Tell me your sleep issues - I will optimize your sleep!"/></div>}
+      {tab==="supplements"&&<div className="card"><p style={{color:BLUSH,fontSize:12,marginBottom:12}}>Always consult a doctor before starting supplements.</p><AIChat sys="You are a women's supplement nutritionist. Explain what supplements help with weight loss, hair growth, clear skin, energy, hormones, sleep, anti-aging. For each: what it does, evidence, dosage, best forms, interactions." ph="Tell me your goals - weight loss, hair growth, clear skin, energy - I will recommend the right supplements!"/></div>}
+      {tab==="journal"&&<div>
+        <div className="card" style={{marginBottom:14}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>📓 Daily Journal</div><textarea className="inp" placeholder="Write freely - feelings, wins, thoughts, gratitude..." value={journalEntry} onChange={e=>setJournalEntry(e.target.value)} style={{minHeight:110,marginBottom:10}}/><button className="btn primary" onClick={saveJournal} style={{width:"100%"}}>Save 💕</button></div>
+        {(user.journal||[]).length>0&&<div className="card" style={{marginBottom:14}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>Past Entries</div>{[...(user.journal||[])].reverse().slice(0,8).map((j,i)=><div key={i} style={{padding:"9px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}}><div style={{fontSize:11,color:MUTED,marginBottom:3}}>{j.date}</div><div style={{fontSize:13,color:CREAM,lineHeight:1.6}}>{j.entry}</div></div>)}</div>}
+        <div className="card"><AIChat sys="You are a journal therapist and life coach. Provide reflective prompts, help process emotions, guide intention-setting. Be warm and encouraging." ph="Ask for a journal prompt or share what is on your mind..."/></div>
+      </div>}
+      {tab==="stress"&&<div className="card"><AIChat sys="You are a stress management coach. Give practical immediately usable stress relief techniques - breathing, grounding, quick routines. Explain how stress affects weight, skin, and beauty." ph="Tell me about your stress - I will give you immediate relief techniques and long-term strategies!"/></div>}
+      {tab==="hormone"&&<div className="card"><AIChat sys="You are a women's hormone health specialist. Explain how hormones (estrogen, progesterone, cortisol, insulin, thyroid) affect weight, skin, hair, mood, and energy. Give practical lifestyle, diet, and supplement guidance. Always recommend seeing a doctor for serious concerns." ph="Tell me your symptoms - weight gain, skin changes, mood swings, fatigue - I will explain the hormone connection!"/></div>}
+      {tab==="meditation"&&<div className="card"><AIChat sys="You are a meditation teacher. Lead guided meditations, breathing exercises, body scans, and visualizations. Include quick 2-minute AND longer 15-minute sessions. Be calming and guiding." ph="What kind of meditation do you need? (anxiety relief, sleep, confidence, focus, gratitude)"/></div>}
+    </div>
+  );
+}
+
+// ── GlowUp ───────────────────────────────────────────────────────
+function GlowUp({ user }) {
+  const [tab, setTab] = useState("plan");
+  const TABS=[["plan","🌟 Glow-Up Plan"],["confidence","💫 Confidence"],["brand","✨ Personal Brand"],["goals","🎯 90-Day Goals"],["ai","🔥 Glow Coach"]];
+  return (
+    <div>
+      <h2 className="sh">Glow-Up System 🌟</h2>
+      <p style={{color:MUTED,fontSize:13,marginBottom:16}}>Your complete identity transformation system - no other app has this.</p>
+      <div className="tabs">{TABS.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"btn soft"+(tab===k?" on":"")}>{l}</button>)}</div>
+      {tab==="plan"&&<div className="card"><AIChat sys="You are a life transformation coach specializing in complete glow-ups - appearance, skincare, hair, style, fitness, mental health, confidence, habits, and personal brand. Create comprehensive actionable 30/60/90-day plans." ph="Tell me where you are now and where you want to be - I will build your complete glow-up plan!"/></div>}
+      {tab==="confidence"&&<div className="card"><AIChat sys="You are a confidence coach and body image specialist. Help build genuine self-confidence, improve body image, develop self-love practices. Give practical daily exercises, mindset shifts, and real techniques." ph="Tell me about your confidence struggles - I will help you build unshakeable confidence!"/></div>}
+      {tab==="brand"&&<div className="card"><AIChat sys="You are a personal branding expert. Help people craft a powerful personal brand - signature style, color palette, aesthetic, how they present themselves, and how to show up consistently." ph="Tell me about yourself, your goals, your personality - I will help you build a powerful personal brand!"/></div>}
+      {tab==="goals"&&<div className="card"><AIChat sys="You are a goal-setting coach. Help set realistic measurable 90-day goals across beauty, weight loss, fitness, style, and wellness. Break big goals into weekly action steps." ph="Tell me your biggest transformation goal - I will build your 90-day action plan!"/></div>}
+      {tab==="ai"&&<div className="card"><AIChat sys="You are the ultimate glow-up coach combining expertise in beauty, weight loss, style, confidence, mental health, and personal branding. You see the whole person and help transform every area of life." ph="Ask me anything about your glow-up 🔥"/></div>}
+    </div>
+  );
+}
+
+// ── Community ────────────────────────────────────────────────────
+function Community({ user, setUser }) {
+  const save = u => persistUser(u, setUser);
+  const [tab, setTab] = useState("feed");
+  const [post, setPost] = useState("");
+  const TABS=[["feed","🌸 Feed"],["challenges","🏆 Challenges"],["tips","💡 Tips"],["accountability","👯 Accountability"]];
+  const db=loadDB(), allPosts=db.communityPosts||[];
+  function addPost(){if(!post.trim())return;const p={user:user.name,text:post,date:new Date().toLocaleDateString(),ts:Date.now()};const updated=[p,...allPosts];saveDB({...db,communityPosts:updated});setPost("");save({...user,lastPostTs:Date.now()});}
+  const challenges=[{n:"30-Day Glow Challenge",d:"Skincare + 64oz water + 7hr sleep",e:"✨"},{n:"10-Pound Challenge",d:"Lose 10lbs in 30 days with daily check-ins",e:"⚖️"},{n:"No-Buy Beauty Month",d:"Use only what you have for 30 days",e:"💰"},{n:"Nail Growth Challenge",d:"Daily cuticle oil, no picking, 30 days",e:"💅"},{n:"Style Remix Challenge",d:"No new clothes - remix your closet 30 days",e:"👗"},{n:"Self-Love Challenge",d:"One compliment to yourself daily for 21 days",e:"💕"}];
+  return (
+    <div>
+      <h2 className="sh">Community 🌸</h2>
+      <div className="tabs">{TABS.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"btn soft"+(tab===k?" on":"")}>{l}</button>)}</div>
+      {tab==="feed"&&<div>
+        <div className="card" style={{marginBottom:14}}><div style={{fontSize:12,color:G,fontWeight:600,marginBottom:10}}>✍️ Share with the Community</div><textarea className="inp" placeholder="Share your progress, tips, questions, or encouragement..." value={post} onChange={e=>setPost(e.target.value)} style={{marginBottom:10}}/><button className="btn primary" onClick={addPost}>Post 💕</button></div>
+        {allPosts.length===0?<div className="card"><p style={{color:MUTED,fontSize:13}}>Be the first to post! 💕</p></div>:allPosts.slice(0,20).map((p,i)=><div key={i} className="card" style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontSize:13,fontWeight:600,color:R}}>{p.user}</span><span style={{fontSize:11,color:MUTED}}>{p.date}</span></div><p style={{fontSize:13,color:CREAM,lineHeight:1.6}}>{p.text}</p></div>)}
+      </div>}
+      {tab==="challenges"&&<div className="g2">{challenges.map(c=><div key={c.n} className="card"><div style={{fontSize:26,marginBottom:8}}>{c.e}</div><div style={{fontSize:13,fontWeight:600,color:CREAM,marginBottom:4}}>{c.n}</div><div style={{fontSize:11,color:MUTED,marginBottom:12}}>{c.d}</div><button className="btn soft" style={{fontSize:11}}>Join Challenge</button></div>)}</div>}
+      {tab==="tips"&&<div className="card"><AIChat sys="You are a beauty and wellness tip generator. Give specific, practical, actionable tips for beauty, skincare, weight loss, nails, hair, and wellness. Include budget hacks and pro tricks." ph="Ask for tips on any topic - skin, hair, weight loss, nails, style..."/></div>}
+      {tab==="accountability"&&<div className="card"><AIChat sys="You are an accountability coach. Help people stay on track with beauty, weight loss, and wellness goals. Check in on progress, celebrate wins, troubleshoot setbacks. Be encouraging and loving." ph="Tell me your goal - I will be your accountability partner!"/></div>}
+    </div>
+  );
+}
+
+// ── Services ─────────────────────────────────────────────────────
+function Services({ user }) {
+  const [tab, setTab] = useState("find");
+  const TABS=[["find","📍 Find Services"],["prep","📋 Prep Guide"],["questions","❓ What to Ask"],["aftercare","🌿 Aftercare"]];
+  return (
+    <div>
+      <h2 className="sh">Beauty Services 💆</h2>
+      <div className="tabs">{TABS.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={"btn soft"+(tab===k?" on":"")}>{l}</button>)}</div>
+      {tab==="find"&&<div className="card"><AIChat sys="You are a beauty service advisor. Help people find the right services - hair salons, nail salons, estheticians, lash techs, brow artists, med spas. Cover what to look for, questions to ask, red flags, price ranges." ph="Tell me your city and what service you are looking for - I will tell you everything!"/></div>}
+      {tab==="prep"&&<div className="card"><AIChat sys="You are a beauty service prep expert. Give detailed before-appointment instructions for every service - hair, nails, lashes, brows, facials, waxing, tanning, massage. What to do, avoid, bring, and tell the technician." ph="What appointment are you prepping for? (hair, nails, lashes, facial, waxing...)"/></div>}
+      {tab==="questions"&&<div className="card"><AIChat sys="You are a beauty service consultant. Give the exact questions to ask stylists, nail techs, estheticians, and beauty pros. Help people communicate exactly what they want." ph="Which service? I will give you the exact questions to ask!"/></div>}
+      {tab==="aftercare"&&<div className="card"><AIChat sys="You are a beauty aftercare specialist. Give detailed aftercare for every service to maximize results and longevity. What to do and avoid for 24hrs, 48hrs, and ongoing." ph="What service did you just get? I will give you complete aftercare instructions!"/></div>}
+    </div>
+  );
+}
+
+// ── App Shell ────────────────────────────────────────────────────
+const SCREENS=[
+  {id:"dashboard",label:"Home",emoji:"🏠",Comp:Dashboard},
+  {id:"weight",label:"Weight Loss",emoji:"⚖️",Comp:WeightLoss},
+  {id:"beauty",label:"Beauty",emoji:"💄",Comp:Beauty},
+  {id:"nails",label:"Nails",emoji:"💅",Comp:Nails},
+  {id:"fashion",label:"Fashion",emoji:"👗",Comp:Fashion},
+  {id:"body",label:"Body Tracker",emoji:"📏",Comp:BodyTracker},
+  {id:"skin",label:"Skin Tracker",emoji:"🔬",Comp:SkinTracker},
+  {id:"tryon",label:"Try-On",emoji:"✨",Comp:TryOn},
+  {id:"wellness",label:"Wellness",emoji:"🌸",Comp:Wellness},
+  {id:"glowup",label:"Glow-Up",emoji:"🌟",Comp:GlowUp},
+  {id:"community",label:"Community",emoji:"👯",Comp:Community},
+  {id:"services",label:"Services",emoji:"💆",Comp:Services},
+];
+
+function App() {
+  const [user, setUser] = useState(null);
+  const [screen, setScreen] = useState("dashboard");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  useEffect(() => {
+    const db = loadDB();
+    if(db.lastUser && db.users?.[db.lastUser]) setUser(db.users[db.lastUser]);
+  }, []);
+
+  function handleLogin(u) { const db=loadDB(); saveDB({...db,lastUser:u.email}); setUser(u); }
+  function logout() { const db=loadDB(); saveDB({...db,lastUser:null}); setUser(null); setScreen("dashboard"); }
+
+  if(!user) return <Auth onLogin={handleLogin}/>;
+
+  const active = SCREENS.find(s=>s.id===screen)||SCREENS[0];
+  const {Comp} = active;
+
+  return (
+    <div>
+      {showSettings && <Settings onClose={()=>setShowSettings(false)}/>}
+      <div style={{position:"fixed",top:0,left:0,right:0,zIndex:500,background:PANEL,padding:"11px 16px",borderBottom:"1px solid "+BORDER,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div className="serif" style={{fontSize:20,background:GRAD,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",fontWeight:700}}>She Glows ✨</div>
+        <button onClick={()=>setMenuOpen(p=>!p)} className="btn ghost" style={{padding:"6px 14px",fontSize:12}}>☰ Menu</button>
+      </div>
+      {menuOpen&&(
+        <div style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,.65)"}} onClick={()=>setMenuOpen(false)}>
+          <div style={{position:"absolute",left:0,top:0,bottom:0,width:240,background:PANEL,padding:"16px 10px",overflowY:"auto",borderRight:"1px solid "+BORDER}} onClick={e=>e.stopPropagation()}>
+            <div className="serif" style={{fontSize:22,background:GRAD,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",textAlign:"center",marginBottom:8}}>She Glows ✨</div>
+            <div style={{fontSize:11,color:MUTED,textAlign:"center",marginBottom:16}}>Hi, {user.name} 💕</div>
+            {SCREENS.map(s=>(
+              <div key={s.id} onClick={()=>{setScreen(s.id);setMenuOpen(false);}} style={{display:"flex",alignItems:"center",gap:9,padding:"10px 12px",borderRadius:10,cursor:"pointer",color:screen===s.id?R:MUTED,fontSize:13,fontWeight:screen===s.id?600:400,background:screen===s.id?"rgba(232,82,122,.12)":"transparent",marginBottom:2}}>
+                <span style={{fontSize:15}}>{s.emoji}</span><span>{s.label}</span>
+              </div>
+            ))}
+            <div onClick={()=>{setShowSettings(true);setMenuOpen(false);}} style={{display:"flex",alignItems:"center",gap:9,padding:"10px 12px",cursor:"pointer",color:MUTED,fontSize:13,marginTop:8,borderTop:"1px solid "+BORDER,paddingTop:16}}>
+              <span>⚙️</span><span>Settings / API Key</span>
+            </div>
+            <div onClick={logout} style={{display:"flex",alignItems:"center",gap:9,padding:"10px 12px",cursor:"pointer",color:MUTED,fontSize:13}}>
+              <span>🚪</span><span>Sign Out</span>
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={{paddingTop:58,paddingBottom:24,paddingLeft:16,paddingRight:16,maxWidth:760,margin:"0 auto",minHeight:"100vh"}}>
+        <Comp user={user} setUser={setUser}/>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
