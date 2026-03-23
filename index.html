@@ -76,7 +76,7 @@ async function askClaude(msg, sys) {
 }
 
 async function askClaudePhoto(b64, prompt, sys) {
-  const key = (loadDB().apiKey || "").trim();
+  const key = “sk-ant api03--_Qvjsd2J5xSATuBXvZzO205GBNXAQE2vyhuTYQ7GOPGyJJCmHTaFuPluad_g3WejTEMTfk5yy_7JJby1AWjhw-tBZYhQAA";
   if (!key) return "No API key set. Go to Settings in the menu to add your Anthropic API key.";
   const imgData = b64.includes(",") ? b64.split(",")[1] : b64;
   const mediaType = b64.includes("image/png") ? "image/png" : "image/jpeg";
